@@ -5,20 +5,18 @@ import type { Section } from '../lib/sections.ts';
 import { weekOf } from '../lib/dates.ts';
 import { defaultHabitUnit } from '../lib/options.ts';
 import { titles } from '../lib/sections.ts';
+import { BrandMark } from './brand-mark.tsx';
+import { Icon } from './ui-icon.tsx';
 import { LanguageSwitch, useLanguage } from './language.tsx';
 import { useCalendar } from './format-language.ts';
 
 export const plural = (count: number, singular: string, multiple: string) => count + ' ' + (count === 1 ? singular : multiple);
 const initials = (name: string) => name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toLocaleUpperCase('es-CO')).join('');
-const navItems = [['/', 'home'], ['/agenda', 'calendar'], ['/entrenamientos', 'strength'], ['/habitos', 'habits']] as const;
+const navItems = [['/hoy', 'home'], ['/agenda', 'calendar'], ['/entrenamientos', 'strength'], ['/habitos', 'habits']] as const;
 
 type DayView = { state: PlannerState; day: string };
 type ButtonProps = ComponentPropsWithoutRef<'button'> & { action?: string; glyph?: string };
 type IconButtonProps = ButtonProps & { glyph: string; label: string };
-
-export function Icon({ name, className = '' }: { name: string; className?: string }) {
-  return <svg className={'icon ' + className} aria-hidden="true"><use href={'/assets/icons.svg#' + name} /></svg>;
-}
 
 export function Button({ action, children, glyph, className = 'button secondary', ...props }: ButtonProps) {
   return <button type="button" className={className} data-action={action} {...props}>
@@ -50,8 +48,8 @@ export function Shell({ route, state, children }: { route: Section; state: Plann
   const isAccount = route === '/cuenta';
   return <>
     <aside className="sidebar">
-      <Link href="/" className="brand" aria-label={t('Qualy, ir a Hoy')} data-route="">
-        <img src="/assets/favicon.svg" alt="" width="36" height="36" /><span>qualy<span>.</span></span>
+      <Link href="/hoy" className="brand" aria-label={t('Qualy, ir a Hoy')} data-route="">
+        <BrandMark size={36} /><span>Qualy</span>
       </Link>
       <nav aria-label={t('Menú principal')}>
         <div className="nav-list">{navItems.map(([href, glyph]) =>
@@ -69,8 +67,8 @@ export function Shell({ route, state, children }: { route: Section; state: Plann
     </aside>
     <div className="workspace">
       <header className="topbar"><div className="topbar-inner">
-        <Link href="/" className="brand mobile-brand" aria-label={t('Qualy, ir a Hoy')} data-route="">
-          <img src="/assets/favicon.svg" alt="" width="31" height="31" /><span>qualy<span>.</span></span>
+        <Link href="/hoy" className="brand mobile-brand" aria-label={t('Qualy, ir a Hoy')} data-route="">
+          <BrandMark size={31} /><span>Qualy</span>
         </Link>
         <div className="breadcrumb"><span>{t('Mi espacio')}</span><Icon name="right" /><strong>{t(titles[route])}</strong></div>
         <div className="topbar-actions">
@@ -318,7 +316,7 @@ export function Account({ state, register, error, pending }: { state: PlannerSta
     </div>
   </>;
   return <section className="auth-layout"><div className="panel auth-panel">
-    <img src="/assets/favicon.svg" alt="" width="43" height="43" />
+    <BrandMark size={43} />
     <h1>{register ? t('Crea tu cuenta') : t('Inicia sesión')}</h1>
     <p>{register ? t('Empieza tu propia agenda de entrenamientos y hábitos.') : t('Entra para consultar tu entrenamiento y tus hábitos.')}</p>
     <div className="auth-tabs" aria-label={t('Acceso a Qualy')}>
@@ -335,6 +333,6 @@ export function Account({ state, register, error, pending }: { state: PlannerSta
       <p className="form-error" role="alert" hidden={!error}>{error}</p>
       <button className="button primary" type="submit" disabled={pending}>{register ? t('Crear cuenta') : t('Iniciar sesión')} <Icon name="arrow" /></button>
     </form>
-    <ActionLink href="/" glyph="left" className="text-link auth-back">{t('Volver a la demo')}</ActionLink>
+    <ActionLink href="/hoy" glyph="left" className="text-link auth-back">{t('Volver a la demo')}</ActionLink>
   </div></section>;
 }

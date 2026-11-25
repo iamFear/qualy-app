@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { isSection, titles } from '../../lib/sections.ts';
-import { translate } from '../../lib/i18n.ts';
-import { requestLanguage } from '../request-language.ts';
-import { QualyPage } from '../qualy.tsx';
+import { isSection, titles } from '../../../lib/sections.ts';
+import { translate } from '../../../lib/i18n.ts';
+import { requestLanguage } from '../../request-language.ts';
+import { QualyPage } from '../../qualy.tsx';
 
-type PlannerPage = PageProps<'/[[...section]]'>;
+type PlannerPage = PageProps<'/[...section]'>;
 
 async function getRoute(params: PlannerPage['params']) {
-  const { section = [] } = await params;
+  const { section } = await params;
   const route = '/' + section.join('/');
   if (!isSection(route)) notFound();
   return route;

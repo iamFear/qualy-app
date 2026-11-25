@@ -10,7 +10,7 @@ export default async function NotFound() {
     <main className="loading" id="contenido">
       <strong>qualy.</strong>
       <p>{translate(locale, 'No encontramos esta página.')}</p>
-      <Link className="button primary" href="/">{translate(locale, 'Volver a Hoy')}</Link>
+      <Link className="button primary" href="/hoy">{translate(locale, 'Volver a Hoy')}</Link>
     </main>
   </>;
 }

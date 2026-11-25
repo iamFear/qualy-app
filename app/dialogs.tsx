@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { ComponentPropsWithoutRef } from 'react';
 import type { Exercise, Habit, Workout } from '../lib/models.ts';
 import { categories, defaultHabitUnit, habitIcons } from '../lib/options.ts';
-import { Button, Icon, IconButton, plural } from './views.tsx';
+import { Icon } from './ui-icon.tsx';
+import { Button, IconButton, plural } from './views.tsx';
 import { useLanguage } from './language.tsx';
 import { useCalendar } from './format-language.ts';
 

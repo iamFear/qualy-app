@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { translate } from '../lib/i18n.ts';
-import { QualyProvider } from './qualy.tsx';
 import { LanguageProvider } from './language.tsx';
 import { requestLanguage } from './request-language.ts';
 import './styles.css';
@@ -15,15 +14,16 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export const viewport: Viewport = { themeColor: '#f7f8f4' };
+export const viewport: Viewport = { themeColor: '#f3f6ef' };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const locale = await requestLanguage();
   return <html lang={locale}>
     <head><link rel="preload" href="/assets/outfit.woff2" as="font" type="font/woff2" crossOrigin="anonymous" /></head>
-    <body>
+    {/* Browser extensions can add attributes to the body before hydration. */}
+    <body suppressHydrationWarning>
       <a href="#contenido" className="skip">{translate(locale, 'Ir al contenido')}</a>
-      <LanguageProvider locale={locale}><QualyProvider>{children}</QualyProvider></LanguageProvider>
+      <LanguageProvider locale={locale}>{children}</LanguageProvider>
       <noscript>{translate(locale, 'Activa JavaScript en tu navegador para usar Qualy.')}</noscript>
     </body>
   </html>;

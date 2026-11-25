@@ -6,7 +6,7 @@ Qualy reúne tu agenda de entrenamientos y tus hábitos. En **Hoy** puedes ver q
 
 ## Empieza a usar Qualy
 
-Explora la demo para conocer la agenda y probar el registro de hábitos. Los cambios que hagas en la demo se guardan durante siete días en ese navegador.
+Selecciona **Probar la demo** en la portada para conocer la agenda y probar el registro de hábitos. Los cambios que hagas en la demo se guardan durante siete días en ese navegador.
 
 Cuando quieras llevar tu propio registro, selecciona **Crear cuenta** en la barra superior. Regístrate con tu nombre, correo y contraseña para empezar tu agenda personal.
 

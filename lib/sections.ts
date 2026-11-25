@@ -1,5 +1,5 @@
 export const titles = {
-  '/': 'Hoy',
+  '/hoy': 'Hoy',
   '/agenda': 'Agenda',
   '/entrenamientos': 'Entrenamientos',
   '/habitos': 'Hábitos',
