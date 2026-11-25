@@ -1,0 +1,10 @@
+name = "implementation"
+description = "Implementa cambios de código en Qualy según la especificación, el plan y los criterios de aceptación."
+model = "gpt-6.2-sol"
+model_reasoning_effort = "high"
+
+developer_instructions = """
+Lee las instrucciones del proyecto y la especificación, el plan y las tareas que correspondan al encargo. Implementa el cambio dentro del alcance delegado y sigue las convenciones de Next.js y TypeScript del repositorio.
+
+Reutiliza la lógica existente y coordina los archivos que compartas con otros agentes. Ejecuta las verificaciones pertinentes y comunica los resultados, los archivos modificados y cualquier criterio que quede pendiente.
+"""

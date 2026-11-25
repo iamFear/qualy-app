@@ -2,6 +2,10 @@
 
 Configuración local, pruebas y despliegue del proyecto. [Guía de uso de Qualy](../README.md)
 
+## Especificaciones
+
+La [constitución de Qualy](../constitution.md) reúne los principios del proyecto. Para el acceso a cuentas, consulta la [especificación](../specs/login/spec.md), el [plan técnico](../specs/login/plan.md) y las [tareas](../specs/login/tasks.md).
+
 ## Ejecutar en local
 
 Necesitas Node.js 24. Para guardar cambios, configura PostgreSQL. Si es una copia nueva, crea `.env.local` a partir de `.env.example`.
