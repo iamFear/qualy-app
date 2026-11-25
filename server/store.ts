@@ -2,10 +2,9 @@ import type { ISql } from 'postgres';
 import type { Habit, HabitInput, HabitLog, HabitLogInput, PlannerState, Workout, WorkoutInput } from '../lib/models.ts';
 import { randomUUID } from 'node:crypto';
 import { connectDatabase } from './db.ts';
-import { demoState } from '../lib/demo.ts';
 import { HttpError } from './validation.ts';
 
-type SessionUser = { id: string; name: string; email: string | null; demo_expires: string | null };
+type SessionUser = { id: string } & PlannerState['user'];
 type Account = { name: string; email: string; passwordHash: string; hash: string; expires: number; replacedHash?: string };
 
 export function openStore(url?: string, schema = 'qualy') {
@@ -17,17 +16,6 @@ export function openStore(url?: string, schema = 'qualy') {
   const habits = table('habits');
   const logs = table('habit_logs');
 
-  function putWorkout(tx: ISql, owner: string, id: string, item: WorkoutInput & { done?: boolean }) {
-    return tx`INSERT INTO ${workouts} (owner, id, name, day, time, duration, category, notes, exercises, done)
-      VALUES (${owner}, ${id}, ${item.name}, ${item.day}, ${item.time}, ${item.duration}, ${item.category},
-        ${item.notes}, ${tx.json(item.exercises)}, ${Boolean(item.done)})`;
-  }
-
-  function putHabit(tx: ISql, owner: string, id: string, item: HabitInput, day: string) {
-    return tx`INSERT INTO ${habits} (owner, id, name, icon, target, unit, note, created_on)
-      VALUES (${owner}, ${id}, ${item.name}, ${item.icon}, ${item.target}, ${item.unit}, ${item.note}, ${day})`;
-  }
-
   async function putSession(tx: ISql, hash: string, owner: string, expires: number, replacedHash?: string) {
     await tx`INSERT INTO ${sessions} (hash, owner, expires) VALUES (${hash}, ${owner}, ${expires})`;
     if (replacedHash) await tx`DELETE FROM ${sessions} WHERE hash = ${replacedHash}`;
@@ -36,13 +24,14 @@ export function openStore(url?: string, schema = 'qualy') {
   return {
     close: () => sql.end({ timeout: 5 }),
     async userForEmail(email: string): Promise<{ id: string; password_hash: string | null } | undefined> {
-      const [user] = await sql<{ id: string; password_hash: string | null }[]>`SELECT id, password_hash FROM ${users} WHERE email = ${email}`;
+      const [user] = await sql<{ id: string; password_hash: string | null }[]>`SELECT id, password_hash FROM ${users}
+        WHERE email = ${email} AND demo_expires IS NULL`;
       return user;
     },
     async userForSession(hash: string, now: number): Promise<SessionUser | undefined> {
-      const [user] = await sql<SessionUser[]>`SELECT u.id, u.name, u.email, u.demo_expires
+      const [user] = await sql<SessionUser[]>`SELECT u.id, u.name, u.email
         FROM ${sessions} s JOIN ${users} u ON u.id = s.owner
-        WHERE s.hash = ${hash} AND s.expires > ${now} AND (u.demo_expires IS NULL OR u.demo_expires > ${now})`;
+        WHERE s.hash = ${hash} AND s.expires > ${now} AND u.demo_expires IS NULL AND u.email IS NOT NULL`;
       return user;
     },
     removeSession: (hash: string) => sql`DELETE FROM ${sessions} WHERE hash = ${hash}`,
@@ -57,15 +46,6 @@ export function openStore(url?: string, schema = 'qualy') {
       await tx`INSERT INTO ${users} (id, email, name, password_hash) VALUES (${id}, ${email}, ${name}, ${passwordHash})`;
       await putSession(tx, hash, id, expires, replacedHash);
     }),
-    createDemo: (today: string, hash: string, expires: number) => sql.begin(async (tx) => {
-      const owner = randomUUID();
-      const example = demoState(today);
-      await tx`INSERT INTO ${users} (id, name, demo_expires) VALUES (${owner}, 'Invitado', ${expires})`;
-      for (const item of example.workouts) await putWorkout(tx, owner, item.id, item);
-      for (const item of example.habits) await putHabit(tx, owner, item.id, item, item.created_on);
-      await tx`INSERT INTO ${logs} ${tx(example.logs.map((log) => ({ ...log, owner })), 'owner', 'habit_id', 'day', 'amount')}`;
-      await putSession(tx, hash, owner, expires);
-    }),
     async state(user: SessionUser, today: string): Promise<PlannerState> {
       const owner = user.id;
       const [userWorkouts, userHabits, userLogs] = await Promise.all([
@@ -76,14 +56,16 @@ export function openStore(url?: string, schema = 'qualy') {
         sql<HabitLog[]>`SELECT habit_id, day::text AS day, amount FROM ${logs} WHERE owner = ${owner} ORDER BY habit_id, day`,
       ]);
       return {
-        today, demo: Boolean(user.demo_expires),
-        user: user.email ? { name: user.name, email: user.email } : null,
+        today,
+        user: { name: user.name, email: user.email },
         workouts: userWorkouts, habits: userHabits, logs: userLogs,
       };
     },
     async createWorkout(owner: string, item: WorkoutInput) {
       const id = randomUUID();
-      await putWorkout(sql, owner, id, item);
+      await sql`INSERT INTO ${workouts} (owner, id, name, day, time, duration, category, notes, exercises)
+        VALUES (${owner}, ${id}, ${item.name}, ${item.day}, ${item.time}, ${item.duration}, ${item.category},
+          ${item.notes}, ${sql.json(item.exercises)})`;
       return id;
     },
     async updateWorkout(owner: string, id: string, item: WorkoutInput) {
@@ -103,7 +85,8 @@ export function openStore(url?: string, schema = 'qualy') {
     },
     async createHabit(owner: string, item: HabitInput, today: string) {
       const id = randomUUID();
-      await putHabit(sql, owner, id, item, today);
+      await sql`INSERT INTO ${habits} (owner, id, name, icon, target, unit, note, created_on)
+        VALUES (${owner}, ${id}, ${item.name}, ${item.icon}, ${item.target}, ${item.unit}, ${item.note}, ${today})`;
       return id;
     },
     async updateHabit(owner: string, id: string, item: HabitInput) {

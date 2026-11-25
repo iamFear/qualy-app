@@ -2,7 +2,7 @@
 
 - [x] Definir la identidad, el símbolo, el tono y el patrón.
 - [x] Implementar la portada bilingüe y situar la agenda en `/hoy`.
-- [x] Verificar los accesos de ingreso, registro y demo mediante una compilación de producción.
+- [x] Verificar los accesos de ingreso y registro mediante una compilación de producción.
 - [x] Revisar la composición, la navegación y el foco en escritorio y móvil.
 
 ## Evidencia
@@ -16,3 +16,4 @@
 - En Chrome, los atributos de Grammarly añadidos al `<body>` antes de la hidratación reproducían un aviso de Next.js. Con el ajuste limitado a ese elemento, la reproducción pasó de un aviso a cero. El cambio de idioma, el acceso a la demo, la comprobación de tipos y la compilación pasaron.
 - La prueba de cierre de sesión comprobó que, si el servidor confirma la salida, se oculta la vista privada y se abre la portada aunque falle `/api/state`. Si el servidor no confirma la salida, la cuenta sigue visible con un mensaje de error.
 - La verificación previa al push pasó con Node.js 24.22.3. Semgrep CE 1.180.0 analizó 67 archivos con cero hallazgos y cero errores. El registro npm no reportó vulnerabilidades conocidas para las 64 dependencias auditadas. Pasaron la comprobación de tipos, la compilación, siete pruebas unitarias y de integración y tres recorridos de navegador.
+- En la rama `login` se retiró la demo y se volvió a verificar la portada con los formularios de acceso públicos. La [evidencia del acceso privado](../login/tasks.md) recoge esos resultados.

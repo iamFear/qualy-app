@@ -2,13 +2,13 @@
 
 Qualy reúne tu agenda de entrenamientos y tus hábitos. En **Hoy** puedes ver qué tienes programado, a qué hora entrenas y qué hábitos te faltan por registrar.
 
-![Panel de Qualy con el calendario semanal, un entrenamiento programado y el progreso de los hábitos del día](docs/qualy-dashboard.jpg)
+![Agenda de una cuenta nueva de Qualy, con un saludo por nombre y las acciones para crear el primer entrenamiento y el primer hábito](docs/qualy-dashboard.jpg)
 
 ## Empieza a usar Qualy
 
-Selecciona **Probar la demo** en la portada para conocer la agenda y probar el registro de hábitos. Los cambios que hagas en la demo se guardan durante siete días en ese navegador.
+Selecciona **Crear cuenta** en la portada y regístrate con tu nombre, correo y una contraseña de al menos ocho caracteres que incluya un símbolo o un signo de puntuación. Tu agenda empieza vacía. Crea tus primeros entrenamientos y hábitos para organizar tu semana.
 
-Cuando quieras llevar tu propio registro, selecciona **Crear cuenta** en la barra superior. Regístrate con tu nombre, correo y contraseña para empezar tu agenda personal.
+Si ya tienes una cuenta, selecciona **Iniciar sesión** y usa tu correo y contraseña para abrir tus registros.
 
 ## Planifica tus entrenamientos
 

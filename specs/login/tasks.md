@@ -1,11 +1,18 @@
-# Tareas del acceso a cuentas
+# Tareas del acceso privado
 
-- [x] Revisar el login actual, el esquema PostgreSQL y la cobertura de GitHub Actions.
-- [x] Documentar el alcance, los criterios de aceptación y la propuesta técnica.
-- [ ] Validar el alcance y decidir la adopción de Supabase Auth.
-- [ ] Confirmar el proyecto de Vercel, los proyectos de Supabase, las migraciones aplicadas, las cuentas existentes y el dominio remitente.
-- [ ] Implementar la sesión de Supabase Auth y la comprobación de propiedad en la API. Mantener las pruebas de demo, hábitos y entrenamientos.
-- [ ] Implementar registro, confirmación, acceso, cierre y recuperación en español e inglés.
-- [ ] Si hay cuentas existentes, ensayar su vinculación y la reversión en una base de prueba. Verificar que cada cuenta conserva su historial.
-- [ ] Configurar SMTP y las redirecciones de cada entorno. Verificar casos válidos, enlaces vencidos y aislamiento entre cuentas.
-- [ ] Registrar los resultados de **Verify Qualy**, de la validación de correo en Preview y de la prueba de producción.
+- [x] Auditar el registro existente y aprobar el alcance.
+- [x] Retirar la demo de la portada, el servidor y la agenda.
+- [x] Separar el acceso público y exigir una sesión personal para la agenda.
+- [x] Verificar agenda inicial vacía, creación, persistencia y aislamiento entre cuentas.
+- [x] Registrar el resultado de tipos, compilación y pruebas.
+- [x] Verificar la validación del registro, la unicidad del correo y el saludo personalizado.
+- [ ] Verificar el flujo en Vercel Preview con Supabase de prueba.
+
+## Evidencia
+
+- Pasaron `npm run typecheck` y `npm run build` con Node.js 24.22.3.
+- `npm test` pasó seis pruebas, incluidas dos cuentas aisladas en PostgreSQL desechable. También verificó el rechazo de sesiones antiguas de demo y de sesiones caducadas.
+- `npm run test:e2e` pasó cuatro recorridos en Chromium. Cubrió registro vacío, creación y persistencia de entrenamientos y hábitos, cierre y reingreso, acceso anónimo, navegación hacia atrás y los formularios bilingües.
+- Chromium confirmó el formulario a 320 px y la agenda inicial a 1440 px. En el servidor local, `/cuenta` devolvió 200, `/hoy` remitió al ingreso para una visita anónima y `/api/state` devolvió 401.
+- Vercel denegó el acceso al consultar el proyecto y GitHub no mostró un Preview de `login`. La verificación en Supabase desde Preview sigue pendiente.
+- Tras ajustar el registro, pasaron tipos, compilación, nueve pruebas unitarias y de integración y cuatro recorridos en Chromium. Dos solicitudes simultáneas con variantes del mismo correo dejaron una sola cuenta. En el navegador se verificaron el mensaje de contraseña inválida, el aviso de correo duplicado y el saludo por nombre.

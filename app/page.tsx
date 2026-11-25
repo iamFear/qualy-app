@@ -57,26 +57,13 @@ export default async function Landing() {
           <h1 id="landing-title">{t('Dale ritmo')}<br />{' '}{t('a tu semana.')}</h1>
           <p>{t(plannerDescription)}</p>
           <div className="landing-hero-actions">
-            <Link href="/hoy" className="button landing-button-primary">{t('Probar la demo')} <Icon name="arrow" /></Link>
-            <Link href="/cuenta?modo=registro" className="button landing-button-outline">{t('Crear cuenta')}</Link>
+            <Link href="/cuenta?modo=registro" className="button landing-button-primary">{t('Crear cuenta')} <Icon name="arrow" /></Link>
+            <Link href="/cuenta" className="button landing-button-outline">{t('Iniciar sesión')}</Link>
           </div>
         </div>
         <figure className="landing-figure">
           <img className="landing-photo" src="/assets/qualy-ritmo.webp" alt={t('Una persona se ata los cordones en una pista de entrenamiento.')}
             width="1280" height="960" fetchPriority="high" />
-          <figcaption className="landing-example">
-            <strong className="landing-example-title">{t('Hoy en la demo')}</strong>
-            <div className="landing-example-row">
-              <span className="landing-example-icon"><Icon name="strength" /></span>
-              <span>{t('Sesión de fuerza')}</span>
-              <Icon name="check" className="landing-example-complete" /><span className="sr-only">{t('Completada')}</span>
-            </div>
-            <div className="landing-example-row">
-              <span className="landing-example-icon"><Icon name="water" /></span>
-              <span>{t('Hidratación')}</span><span className="landing-example-count">{t('3 de 5 vasos')}</span>
-              <span className="landing-example-progress" aria-hidden="true" />
-            </div>
-          </figcaption>
         </figure>
       </section>
       <section className="landing-features" id="como-funciona" aria-labelledby="landing-features-title">

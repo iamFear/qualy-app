@@ -35,11 +35,8 @@ export type HabitLogInput = { delta: number } | { done: boolean };
 
 export type PlannerState = {
   today: string;
-  demo: boolean;
-  user: { name: string; email: string } | null;
+  user: { name: string; email: string };
   workouts: Workout[];
   habits: Habit[];
   logs: HabitLog[];
 };
-
-export type QualyState = PlannerState & { signedIn: boolean };

@@ -1,16 +1,17 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { isSection, titles } from '../../../lib/sections.ts';
 import { translate } from '../../../lib/i18n.ts';
 import { requestLanguage } from '../../request-language.ts';
-import { QualyPage } from '../../qualy.tsx';
+import { PlannerUnavailable, QualyPage } from '../../qualy.tsx';
+import { requestAccount } from '../../session-server.ts';
 
 type PlannerPage = PageProps<'/[...section]'>;
 
 async function getRoute(params: PlannerPage['params']) {
   const { section } = await params;
   const route = '/' + section.join('/');
-  if (!isSection(route)) notFound();
+  if (!isSection(route) || route === '/cuenta') notFound();
   return route;
 }
 
@@ -19,8 +20,14 @@ export async function generateMetadata({ params }: Pick<PlannerPage, 'params'>):
   return { title: translate(locale, titles[route]) };
 }
 
-export default async function Page({ params, searchParams }: PlannerPage) {
+export default async function Page({ params }: PlannerPage) {
   const route = await getRoute(params);
-  const register = route === '/cuenta' && (await searchParams).modo === 'registro';
-  return <QualyPage route={route} register={register} />;
+  let account;
+  try {
+    account = await requestAccount();
+  } catch {
+    return <PlannerUnavailable />;
+  }
+  if (!account) redirect('/cuenta');
+  return <QualyPage route={route} />;
 }

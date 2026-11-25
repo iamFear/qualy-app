@@ -48,7 +48,7 @@ Puedes pasar otro archivo con `npm run db:import-sqlite -- /ruta/qualy.sqlite`. 
 
 Qualy usa TypeScript en modo estricto. Next.js usa el App Router para las pantallas de Hoy, Agenda, Entrenamientos, Hábitos y Mi cuenta. La interfaz usa React y CSS. La API JSON usa Route Handlers en el runtime de Node.js. PostgreSQL en Supabase guarda cuentas, sesiones de acceso, entrenamientos, hábitos y registros diarios. La API se conecta con el paquete `postgres` (Postgres.js). La actualización de un contador sucede dentro de una transacción para conservar incrementos simultáneos.
 
-Qualy guarda contraseñas derivadas con scrypt y almacena el hash de los tokens de sesión. La cookie de sesión es `HttpOnly` y `SameSite=Strict`. El servidor valida las solicitudes de escritura y usa el identificador de la sesión para determinar qué registros puede consultar y modificar cada cuenta. Los límites para abrir demos y para registrarse o iniciar sesión se aplican por proceso de Node.js.
+Qualy guarda contraseñas derivadas con scrypt y almacena el hash de los tokens de sesión. La cookie de sesión es `HttpOnly` y `SameSite=Strict`. Los formularios de ingreso y registro son públicos. Las páginas de la agenda y su API exigen una sesión personal válida. El servidor usa la identidad verificada para determinar qué registros puede consultar y modificar cada cuenta. Los límites para registrarse o iniciar sesión se aplican por proceso de Node.js.
 
 | Variable | Predeterminado | Uso |
 | --- | --- | --- |
@@ -69,7 +69,7 @@ npm run typecheck
 npm test
 ```
 
-Las pruebas unitarias cubren el calendario y el idioma. Para ejecutar también las pruebas de integración, configura `QUALY_TEST_DATABASE_URL` con una base PostgreSQL de prueba y vuelve a ejecutar `npm test`. Las pruebas crean esquemas temporales y verifican el aislamiento entre cuentas y demos, la validación de datos, los incrementos concurrentes y la persistencia después de reiniciar la API.
+Las pruebas unitarias cubren el calendario y el idioma. Para ejecutar también las pruebas de integración, configura `QUALY_TEST_DATABASE_URL` con una base PostgreSQL de prueba y vuelve a ejecutar `npm test`. Las pruebas crean esquemas temporales y verifican el aislamiento entre cuentas, el estado inicial vacío, la validación de datos, los incrementos concurrentes y la persistencia después de reiniciar la API.
 
 ### Pruebas en navegador
 

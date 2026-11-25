@@ -1,21 +1,19 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { FormEvent, MouseEvent, ReactNode } from 'react';
-import type { Locale } from '../lib/i18n.ts';
-import type { PlannerState, QualyState } from '../lib/models.ts';
+import { flushSync } from 'react-dom';
+import type { PlannerState } from '../lib/models.ts';
 import type { Section } from '../lib/sections.ts';
 import type { PlannerDialog } from './dialogs.tsx';
-import { useRouter } from 'next/navigation';
 import { addDays } from '../lib/dates.ts';
-import { localizeDemo } from '../lib/demo-language.ts';
 import { defaultHabitUnit } from '../lib/options.ts';
+import { ApiError, errorMessage, request } from './api-request.ts';
 import { LanguageSwitch, useLanguage } from './language.tsx';
 import { DialogContent } from './dialogs.tsx';
 import { Icon } from './ui-icon.tsx';
 import { Account, Agenda, Habits, Shell, Today, Workouts } from './views.tsx';
 
-type WriteMethod = 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 type LoadStatus = { pending: boolean; error: string };
 type PlannerContext = {
   state: PlannerState | null;
@@ -23,15 +21,12 @@ type PlannerContext = {
   loadStatus: LoadStatus;
   retryLoad: () => void;
   pending: boolean;
-  changeView: (route: Section, register: boolean) => void;
-  authError: string;
+  changeView: (route: Section) => void;
 };
 type MutationOptions = {
-  scope?: 'auth';
   close?: boolean;
-  clearState?: boolean;
+  logout?: boolean;
   message?: string;
-  personal?: boolean;
   after?: () => void;
 };
 
@@ -40,24 +35,8 @@ const workoutsEndpoint = (id: string) => '/api/workouts/' + encodeURIComponent(i
 const habitsEndpoint = (id: string) => '/api/habits/' + encodeURIComponent(id);
 const views = { '/hoy': Today, '/agenda': Agenda, '/entrenamientos': Workouts, '/habitos': Habits, '/cuenta': Account };
 
-function request(path: '/api/state'): Promise<QualyState>;
-function request(path: string, method: WriteMethod, body?: object): Promise<void>;
-async function request(path: string, method: WriteMethod | 'GET' = 'GET', body: object = {}): Promise<QualyState | void> {
-  const response = await fetch(path, method === 'GET' ? { cache: 'no-store' } : {
-    method,
-    headers: { 'Content-Type': 'application/json', 'X-Qualy-Request': '1' },
-    body: JSON.stringify(body),
-  }).catch(() => null);
-  const value: unknown = await response?.json().catch(() => null);
-  if (!response?.ok || !value) {
-    const message = value && typeof value === 'object' && 'error' in value && typeof value.error === 'string' ? value.error : undefined;
-    throw new Error(message ?? 'No pudimos conectar con Qualy. Intenta de nuevo.');
-  }
-  if (method === 'GET') return value as QualyState;
-}
-
-function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : 'Ocurrió un error. Intenta de nuevo.';
+function isUnauthorized(error: unknown) {
+  return error instanceof ApiError && error.status === 401;
 }
 
 function selectorFor(node: Element | null) {
@@ -96,15 +75,13 @@ function habitFrom(form: HTMLFormElement) {
 }
 
 export function QualyProvider({ children }: { children: ReactNode }) {
-  const router = useRouter();
-  const { locale, t } = useLanguage();
-  const [state, setState] = useState<QualyState | null>(null);
+  const { t } = useLanguage();
+  const [state, setState] = useState<PlannerState | null>(null);
   const [loadStatus, setLoadStatus] = useState<LoadStatus>({ pending: true, error: '' });
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [modal, setModal] = useState<PlannerDialog | null>(null);
   const [error, setError] = useState('');
-  const [authError, setAuthError] = useState<{ locale: Locale; wording: string } | null>(null);
   const [pending, setPending] = useState(false);
   const [notice, setNotice] = useState({ message: '', visible: false, error: false });
   const busy = useRef(false);
@@ -112,18 +89,42 @@ export function QualyProvider({ children }: { children: ReactNode }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const returnFocus = useRef('');
   const toastTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const previousView = useRef<string | null>(null);
+  const previousView = useRef<Section | null>(null);
   const day = selectedDay ?? state?.today;
-  const displayState = useMemo(() => state ? localizeDemo(state, locale) : null, [state, locale]);
+
+  const leavePlanner = useCallback((destination: '/' | '/cuenta') => {
+    flushSync(() => {
+      setState(null);
+      setSelectedDay(null);
+      setModal(null);
+    });
+    window.location.replace(destination);
+  }, []);
 
   useEffect(() => {
     let active = true;
     request('/api/state').then(
       (value) => { if (active) setState(value); },
-      (failure: unknown) => { if (active) setLoadStatus({ pending: false, error: errorMessage(failure) }); },
+      (failure: unknown) => {
+        if (!active) return;
+        if (isUnauthorized(failure)) leavePlanner('/cuenta');
+        else setLoadStatus({ pending: false, error: errorMessage(failure) });
+      },
     );
     return () => { active = false; };
-  }, [loadAttempt]);
+  }, [leavePlanner, loadAttempt]);
+
+  useEffect(() => {
+    // A history restore must re-authorize before displaying the saved private document.
+    const hide = () => { if (app.current) app.current.hidden = true; };
+    const restore = (event: PageTransitionEvent) => { if (event.persisted) window.location.reload(); };
+    window.addEventListener('pagehide', hide);
+    window.addEventListener('pageshow', restore);
+    return () => {
+      window.removeEventListener('pagehide', hide);
+      window.removeEventListener('pageshow', restore);
+    };
+  }, []);
 
   useEffect(() => () => clearTimeout(toastTimeout.current), []);
 
@@ -146,12 +147,10 @@ export function QualyProvider({ children }: { children: ReactNode }) {
     setModal(null);
   }, [focusControl]);
 
-  const changeView = useCallback((route: Section, register: boolean) => {
-    const view = route + (register ? '?modo=registro' : '');
+  const changeView = useCallback((route: Section) => {
     const previous = previousView.current;
-    if (previous === view) return;
-    previousView.current = view;
-    setAuthError(null);
+    if (previous === route) return;
+    previousView.current = route;
     if (!previous) return;
     if (route === '/hoy') setSelectedDay(null);
     if (!busy.current) closeModal(false);
@@ -183,53 +182,50 @@ export function QualyProvider({ children }: { children: ReactNode }) {
     element.scrollTop = 0;
   }, [modal]);
 
-  function refresh(next: QualyState) {
+  function refresh(next: PlannerState) {
     if (day === state?.today) setSelectedDay(null);
     setState(next);
   }
 
   async function mutate(button: HTMLButtonElement | null, action: () => Promise<void>,
-    { scope, close = false, clearState = false, message, personal = true, after }: MutationOptions = {}) {
+    { close = false, logout = false, message, after }: MutationOptions = {}) {
     if (busy.current || !state) return;
     busy.current = true;
     const inModal = dialog.current?.contains(button);
     const focus = selectorFor(button);
     if (button) button.disabled = true;
     setPending(true);
-    if (scope === 'auth') setAuthError(null);
     if (inModal) setError('');
     let saved = false;
-    let signedIn = state.signedIn;
     try {
-      if (personal && !signedIn) {
-        await request('/api/demo', 'POST');
-        signedIn = true;
-      }
       try {
         await action();
       } catch (failure) {
-        const latest = await request('/api/state').catch(() => null);
-        if (latest && signedIn) {
-          refresh(latest);
-          if (!latest.signedIn) throw new Error('Tu sesión venció. Inicia sesión o vuelve a la demo para continuar.');
+        if (logout || isUnauthorized(failure)) throw failure;
+        try {
+          refresh(await request('/api/state'));
+        } catch (refreshFailure) {
+          if (isUnauthorized(refreshFailure)) throw refreshFailure;
         }
         throw failure;
       }
-      saved = true;
-      if (clearState) {
-        setState(null);
-        setSelectedDay(null);
-      } else {
-        refresh(await request('/api/state'));
+      if (logout) {
+        leavePlanner('/');
+        return;
       }
+      saved = true;
+      refresh(await request('/api/state'));
       if (close) closeModal();
       else if (!inModal && focus) focusControl(focus);
       if (after) after();
       if (message) announce(message);
     } catch (failure) {
+      if (!logout && isUnauthorized(failure)) {
+        leavePlanner('/cuenta');
+        return;
+      }
       const wording = saved ? 'El cambio se guardó. Recarga la página para ver el resultado.' : errorMessage(failure);
-      if (scope === 'auth') setAuthError({ locale, wording });
-      else if (inModal) setError(wording);
+      if (inModal) setError(wording);
       else announce(wording, !saved);
       requestAnimationFrame(() => { if (button?.isConnected) button.focus({ preventScroll: true }); });
     } finally {
@@ -245,12 +241,12 @@ export function QualyProvider({ children }: { children: ReactNode }) {
   }
 
   function onClick(event: MouseEvent<HTMLDivElement>) {
-    if (!state || !displayState || !day || !(event.target instanceof Element)) return;
+    if (!state || !day || !(event.target instanceof Element)) return;
     const button = event.target.closest<HTMLButtonElement>('button[data-action]');
     if (!button || button.disabled || busy.current) return;
     const { action, id, day: forDay } = button.dataset;
-    const workout = id ? displayState.workouts.find((item) => item.id === id) : undefined;
-    const habit = id ? displayState.habits.find((item) => item.id === id) : undefined;
+    const workout = id ? state.workouts.find((item) => item.id === id) : undefined;
+    const habit = id ? state.habits.find((item) => item.id === id) : undefined;
 
     switch (action) {
       case 'day': if (forDay) selectDay(forDay); break;
@@ -285,9 +281,7 @@ export function QualyProvider({ children }: { children: ReactNode }) {
       }
       case 'close-modal': closeModal(); break;
       case 'logout':
-        void mutate(button, () => request('/api/logout', 'POST'), {
-          personal: false, clearState: true, close: true, after: () => router.replace('/'), message: 'Sesión cerrada.',
-        });
+        void mutate(button, () => request('/api/logout', 'POST'), { logout: true });
         break;
     }
   }
@@ -295,19 +289,10 @@ export function QualyProvider({ children }: { children: ReactNode }) {
   function onSubmit(event: FormEvent<HTMLDivElement>) {
     event.preventDefault();
     const form = event.target;
-    if (!state || !displayState || !(form instanceof HTMLFormElement)) return;
+    if (!state || !(form instanceof HTMLFormElement)) return;
     const submitter = event.nativeEvent instanceof SubmitEvent ? event.nativeEvent.submitter : null;
     const button = submitter instanceof HTMLButtonElement ? submitter : form.querySelector<HTMLButtonElement>('button[type="submit"]');
     const id = form.dataset.id;
-    if (form.id === 'auth-form') {
-      const register = form.dataset.mode === 'registro';
-      const data = Object.fromEntries(new FormData(form));
-      if (typeof data.email === 'string') data.email = data.email.trim();
-      void mutate(button, () => request(register ? '/api/register' : '/api/login', 'POST', data), {
-        personal: false, scope: 'auth', after: () => router.replace('/hoy'),
-        message: register ? 'Tu cuenta está lista.' : 'Sesión iniciada.',
-      });
-    }
     if (form.id === 'workout-form') {
       const item = workoutFrom(form);
       void mutate(button, () => request(id ? workoutsEndpoint(id) : '/api/workouts', id ? 'PUT' : 'POST', item), {
@@ -316,11 +301,8 @@ export function QualyProvider({ children }: { children: ReactNode }) {
     }
     if (form.id === 'habit-form') {
       const item = habitFrom(form);
-      const displayedHabit = id ? displayState.habits.find((habit) => habit.id === id) : undefined;
-      const storedHabit = displayedHabit && state.habits.find((habit) => habit.id === displayedHabit.id);
-      if (storedHabit && item.unit && item.unit === displayedHabit?.unit) {
-        item.unit = storedHabit.unit;
-      } else if (item.unit?.trim() === t(defaultHabitUnit)) {
+      const storedHabit = id ? state.habits.find((habit) => habit.id === id) : undefined;
+      if (item.unit !== storedHabit?.unit && item.unit.trim() === t(defaultHabitUnit)) {
         item.unit = defaultHabitUnit;
       }
       void mutate(button, () => request(id ? habitsEndpoint(id) : '/api/habits', id ? 'PUT' : 'POST', item), {
@@ -329,10 +311,7 @@ export function QualyProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  return <QualyContext.Provider value={{
-    state: displayState, day, loadStatus, retryLoad, pending, changeView,
-    authError: authError?.locale === locale ? authError.wording : '',
-  }}>
+  return <QualyContext.Provider value={{ state, day, loadStatus, retryLoad, pending, changeView }}>
     <div id="app" ref={app} onClick={onClick} onSubmit={onSubmit}>
       {children}
       <dialog ref={dialog} id="modal" aria-labelledby="modal-title" aria-busy={modal && pending ? true : undefined}
@@ -350,25 +329,32 @@ function usePlanner() {
   return planner;
 }
 
-export function QualyPage({ route, register }: { route: Section; register: boolean }) {
+function PlannerStatus({ pending, error, retry }: LoadStatus & { retry: () => void }) {
   const { t } = useLanguage();
-  const { state, day, loadStatus, retryLoad, pending, authError, changeView } = usePlanner();
-  useEffect(() => changeView(route, register), [changeView, route, register]);
+  return <>
+    <header className="standalone-topbar"><LanguageSwitch /></header>
+    <main className="loading" id="contenido" tabIndex={-1} aria-busy={pending}>
+      <strong>qualy.</strong>
+      <p role="status">{t(pending ? 'Cargando tu espacio…' : error)}</p>
+      {error && <button type="button" className="button primary" onClick={retry} disabled={pending}>
+        {t('Volver a cargar')} <Icon name="redo" />
+      </button>}
+    </main>
+  </>;
+}
 
+export function PlannerUnavailable() {
+  return <PlannerStatus pending={false} error="No pudimos conectar con Qualy. Intenta de nuevo." retry={() => window.location.reload()} />;
+}
+
+export function QualyPage({ route }: { route: Section }) {
+  const { state, day, loadStatus, retryLoad, pending, changeView } = usePlanner();
+  useEffect(() => changeView(route), [changeView, route]);
   if (!state) {
-    return <>
-      <header className="standalone-topbar"><LanguageSwitch /></header>
-      <main className="loading" id="contenido" aria-busy={loadStatus.pending}>
-        <strong>qualy.</strong>
-        <p role="status">{t(loadStatus.pending ? 'Cargando tu espacio…' : loadStatus.error)}</p>
-        {loadStatus.error && <button type="button" className="button primary" onClick={retryLoad} disabled={loadStatus.pending}>
-          {t('Volver a cargar')} <Icon name="redo" />
-        </button>}
-      </main>
-    </>;
+    return <PlannerStatus {...loadStatus} retry={retryLoad} />;
   }
   const View = views[route];
   return <Shell route={route} state={state}>
-    <View state={state} day={day ?? state.today} register={register} error={t(authError)} pending={pending} />
+    <View state={state} day={day ?? state.today} pending={pending} />
   </Shell>;
 }
