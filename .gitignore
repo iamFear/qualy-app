@@ -1,0 +1,45 @@
+# Credentials and local service state
+.env
+.env.*
+!/.env.example
+.envrc
+.envrc.*
+.direnv/
+.npmrc
+*.pem
+*.key
+*.p12
+*.pfx
+/data/
+/backups/
+*.sqlite
+*.sqlite3
+*.db
+*-wal
+*-shm
+*-journal
+*.dump
+*.backup
+*.sql.gz
+.vercel/
+supabase/.temp/
+supabase/.branches/
+
+# Dependencies and build output
+node_modules/
+.next/
+/out/
+/dist/
+next-env.d.ts
+*.tsbuildinfo
+
+# Tests, logs, and OS files
+coverage/
+playwright-report/
+test-results/
+playwright/.auth/
+*.log
+npm-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db
