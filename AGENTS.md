@@ -9,7 +9,7 @@ Delega según el tipo de tarea. Todos los perfiles usan esfuerzo de razonamiento
 | Tarea | Perfil | Modelo |
 | --- | --- | --- |
 | Escribir código | [`implementation`](.codex/agents/implementation.toml) | `gpt-6.2-sol` |
-| Diseñar arquitectura y revisar escalabilidad, stack y seguridad | [`architecture`](.codex/agents/architecture.toml) | `gpt-6.2-astra` |
+| Diseñar arquitectura y revisar escalabilidad, stack y seguridad | [`architecture`](.codex/agents/architecture.toml) | `gpt-6.2-sol` |
 | Probar funcionalidades en el navegador | [`browser_qa`](.codex/agents/browser-qa.toml) | `gpt-6.1-terra` |
 | Leer carpetas y extraer información | [`repository_research`](.codex/agents/repository-research.toml) | `gpt-6-luna` |
 

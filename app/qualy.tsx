@@ -12,7 +12,8 @@ import { localizeDemo } from '../lib/demo-language.ts';
 import { defaultHabitUnit } from '../lib/options.ts';
 import { LanguageSwitch, useLanguage } from './language.tsx';
 import { DialogContent } from './dialogs.tsx';
-import { Account, Agenda, Habits, Icon, Shell, Today, Workouts } from './views.tsx';
+import { Icon } from './ui-icon.tsx';
+import { Account, Agenda, Habits, Shell, Today, Workouts } from './views.tsx';
 
 type WriteMethod = 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 type LoadStatus = { pending: boolean; error: string };
@@ -28,6 +29,7 @@ type PlannerContext = {
 type MutationOptions = {
   scope?: 'auth';
   close?: boolean;
+  clearState?: boolean;
   message?: string;
   personal?: boolean;
   after?: () => void;
@@ -36,7 +38,7 @@ type MutationOptions = {
 const QualyContext = createContext<PlannerContext | null>(null);
 const workoutsEndpoint = (id: string) => '/api/workouts/' + encodeURIComponent(id);
 const habitsEndpoint = (id: string) => '/api/habits/' + encodeURIComponent(id);
-const views = { '/': Today, '/agenda': Agenda, '/entrenamientos': Workouts, '/habitos': Habits, '/cuenta': Account };
+const views = { '/hoy': Today, '/agenda': Agenda, '/entrenamientos': Workouts, '/habitos': Habits, '/cuenta': Account };
 
 function request(path: '/api/state'): Promise<QualyState>;
 function request(path: string, method: WriteMethod, body?: object): Promise<void>;
@@ -151,7 +153,7 @@ export function QualyProvider({ children }: { children: ReactNode }) {
     previousView.current = view;
     setAuthError(null);
     if (!previous) return;
-    if (route === '/') setSelectedDay(null);
+    if (route === '/hoy') setSelectedDay(null);
     if (!busy.current) closeModal(false);
     window.scrollTo({ top: 0, behavior: 'instant' });
     if (!dialog.current?.open || !busy.current) focusControl();
@@ -186,13 +188,8 @@ export function QualyProvider({ children }: { children: ReactNode }) {
     setState(next);
   }
 
-  function leaveAccount() {
-    setSelectedDay(null);
-    router.replace('/');
-  }
-
   async function mutate(button: HTMLButtonElement | null, action: () => Promise<void>,
-    { scope, close = false, message, personal = true, after }: MutationOptions = {}) {
+    { scope, close = false, clearState = false, message, personal = true, after }: MutationOptions = {}) {
     if (busy.current || !state) return;
     busy.current = true;
     const inModal = dialog.current?.contains(button);
@@ -219,7 +216,12 @@ export function QualyProvider({ children }: { children: ReactNode }) {
         throw failure;
       }
       saved = true;
-      refresh(await request('/api/state'));
+      if (clearState) {
+        setState(null);
+        setSelectedDay(null);
+      } else {
+        refresh(await request('/api/state'));
+      }
       if (close) closeModal();
       else if (!inModal && focus) focusControl(focus);
       if (after) after();
@@ -283,7 +285,9 @@ export function QualyProvider({ children }: { children: ReactNode }) {
       }
       case 'close-modal': closeModal(); break;
       case 'logout':
-        void mutate(button, () => request('/api/logout', 'POST'), { personal: false, after: leaveAccount, message: 'Sesión cerrada.' });
+        void mutate(button, () => request('/api/logout', 'POST'), {
+          personal: false, clearState: true, close: true, after: () => router.replace('/'), message: 'Sesión cerrada.',
+        });
         break;
     }
   }
@@ -300,7 +304,8 @@ export function QualyProvider({ children }: { children: ReactNode }) {
       const data = Object.fromEntries(new FormData(form));
       if (typeof data.email === 'string') data.email = data.email.trim();
       void mutate(button, () => request(register ? '/api/register' : '/api/login', 'POST', data), {
-        personal: false, scope: 'auth', after: leaveAccount, message: register ? 'Tu cuenta está lista.' : 'Sesión iniciada.',
+        personal: false, scope: 'auth', after: () => router.replace('/hoy'),
+        message: register ? 'Tu cuenta está lista.' : 'Sesión iniciada.',
       });
     }
     if (form.id === 'workout-form') {
