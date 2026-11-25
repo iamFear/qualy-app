@@ -1,6 +1,6 @@
 name = "architecture"
 description = "Diseña y revisa la arquitectura, la escalabilidad, el stack y la seguridad de Qualy."
-model = "gpt-6.2-astra"
+model = "gpt-6.2-sol"
 model_reasoning_effort = "high"
 
 developer_instructions = """
