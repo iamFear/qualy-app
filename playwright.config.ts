@@ -20,7 +20,7 @@ export default defineConfig({
   },
   webServer: {
     command: 'npm start',
-    url: baseURL + '/api/state',
+    url: baseURL + '/',
     reuseExistingServer: false,
     env: {
       DATABASE_URL: databaseUrl,

@@ -1,21 +1,19 @@
-# Acceso a cuentas en producción
+# Acceso privado a Qualy
 
-**Estado** · Propuesta para revisión.
+**Estado** · Alcance aprobado.
 
-## Objetivo
-
-Permitir que las personas creen una cuenta, inicien y cierren sesión, y recuperen su acceso por correo. La pantalla **Mi cuenta** ya permite registrarse e iniciar sesión. Esta especificación incorpora confirmación de correo y recuperación de contraseña para producción y conserva el acceso de las cuentas existentes.
+La portada presenta Qualy y permite crear una cuenta o iniciar sesión con correo y contraseña. Cada cuenta nueva empieza con una agenda personal vacía.
 
 ## Criterios de aceptación
 
 | Flujo | Resultado esperado |
 | --- | --- |
-| Registro | La persona introduce nombre, correo y contraseña. Recibe un mensaje de confirmación y puede acceder a su agenda privada tras verificar el correo. |
-| Inicio y cierre de sesión | Una cuenta confirmada abre su agenda y conserva la sesión al recargar. Al cerrar sesión, la agenda privada deja de estar accesible desde ese navegador, incluso tras recargar o volver atrás. |
-| Recuperación | Desde **Mi cuenta**, la persona solicita un enlace para elegir una contraseña nueva. Un enlace válido permite el cambio y la contraseña anterior deja de servir para iniciar sesión. |
-| Errores | El formulario guía a la persona ante credenciales inválidas y enlaces vencidos o usados. La respuesta al solicitar recuperación es la misma para correos registrados y desconocidos. |
-| Privacidad y demo | Cada cuenta consulta y modifica solo sus datos. La demo continúa disponible y sus registros temporales se mantienen aislados de las cuentas personales. |
-| Cuentas existentes | Una cuenta previa puede recuperar el acceso y conserva sus entrenamientos, hábitos y registros. |
-| Idiomas | Los formularios, correos y mensajes del flujo se muestran en español o inglés según la preferencia de la persona. |
+| Registro | La persona introduce nombre, un correo con formato válido y una contraseña de al menos ocho caracteres que incluya un signo de puntuación o un símbolo. Cada correo identifica una sola cuenta, incluso con cambios de mayúsculas o espacios al inicio o al final. Al crear la cuenta entra a Hoy con cero entrenamientos, hábitos y registros. |
+| Inicio de sesión | La persona abre su agenda existente y el título de Hoy la saluda por su nombre. La sesión se conserva al recargar y el formulario muestra errores comprensibles si el acceso falla. |
+| Agenda | La persona puede crear y guardar entrenamientos y hábitos. Los datos se conservan al recargar y al volver a iniciar sesión. |
+| Acceso privado | La agenda y su API requieren una sesión personal válida. Sin sesión, una visita a una página privada lleva al inicio de sesión. Cada cuenta puede leer y modificar solo sus registros. |
+| Cierre de sesión | Al confirmarse la salida, la vista oculta los datos privados y vuelve a la portada. Volver atrás o recargar requiere una sesión válida. |
+| Retiro de la demo | Se retiran el acceso público a la demo y la creación de sesiones de ejemplo. Las sesiones antiguas de demo pierden acceso a la agenda. Las cuentas personales conservan su historial. |
+| Idiomas | El acceso, sus mensajes y los estados vacíos están disponibles en español e inglés. |
 
-El alcance cubre correo y contraseña. El acceso con cuentas de terceros y la autenticación multifactor se podrán especificar como funcionalidades futuras.
+La confirmación y la recuperación por correo corresponden a una propuesta posterior de integración con Supabase Auth.

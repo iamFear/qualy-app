@@ -1,5 +1,6 @@
 import { categories, habitIcons } from '../lib/options.ts';
 import type { HabitIcon } from '../lib/options.ts';
+import { maxPasswordLength, minPasswordLength, registrationPasswordHelp } from '../lib/credentials.ts';
 import type { TranslationValues } from '../lib/i18n.ts';
 import type { HabitInput, HabitLogInput, WorkoutInput } from '../lib/models.ts';
 import { toDate } from '../lib/dates.ts';
@@ -48,15 +49,31 @@ export function object(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function isRegistrationEmail(email: string) {
+  const [localPart, domain, ...extra] = email.split('@');
+  if (!domain || extra.length || localPart.length > 64) return false;
+  const labels = domain.split('.');
+  const topLevel = labels.at(-1) ?? '';
+  return localPart.split('.').every((part) => /^[a-z\d!#$%&'*+/=?^_`{|}~-]+$/i.test(part))
+    && labels.length >= 2
+    && labels.every((label) => /^[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?$/i.test(label))
+    && (/^[a-z]{2,}$/i.test(topLevel) || /^xn--/i.test(topLevel))
+    && URL.canParse(`https://${domain}`);
+}
+
 export function credentials(body: Record<string, unknown>, registering: boolean) {
-  const email = text(body.email, 'Correo electrónico', 254).toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email)) invalid('Escribe un correo electrónico válido.');
+  const email = text(body.email, 'Correo electrónico', 254);
+  const validEmail = registering ? isRegistrationEmail(email) : /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email);
+  if (!validEmail) invalid('Escribe un correo electrónico válido.');
   const { password } = body;
-  if (typeof password !== 'string' || password.length < (registering ? 12 : 1) || password.length > 128) {
-    invalid(registering ? 'Usa una contraseña de 12 a 128 caracteres.' : 'Revisa tu contraseña.');
+  if (typeof password !== 'string' || !password.length || password.length > maxPasswordLength) {
+    invalid(registering ? registrationPasswordHelp : 'Revisa tu contraseña.');
+  }
+  if (registering && ([...password].length < minPasswordLength || !/[\p{P}\p{S}]/u.test(password))) {
+    invalid(registrationPasswordHelp);
   }
   const name = registering ? text(body.name, 'Nombre', 70) : '';
-  return { email, password, name };
+  return { email: email.toLowerCase(), password, name };
 }
 
 function video(value: unknown) {

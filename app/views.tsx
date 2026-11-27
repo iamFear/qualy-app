@@ -59,8 +59,8 @@ export function Shell({ route, state, children }: { route: Section; state: Plann
       </nav>
       <div className="sidebar-bottom">
         <Link href="/cuenta" className={'profile' + (isAccount ? ' selected' : '')} data-route="" aria-current={isAccount ? 'page' : undefined}>
-          <span className="avatar">{account ? initials(account.name) : <Icon name="user" />}</span>
-          <span className="profile-copy"><strong>{account ? account.name : t('Invitado')}</strong><small>{account ? t('Mi cuenta') : t('Iniciar sesión')}</small></span>
+          <span className="avatar">{initials(account.name)}</span>
+          <span className="profile-copy"><strong>{account.name}</strong><small>{t('Mi cuenta')}</small></span>
           <Icon name="right" className="profile-arrow" />
         </Link>
       </div>
@@ -73,9 +73,8 @@ export function Shell({ route, state, children }: { route: Section; state: Plann
         <div className="breadcrumb"><span>{t('Mi espacio')}</span><Icon name="right" /><strong>{t(titles[route])}</strong></div>
         <div className="topbar-actions">
           <LanguageSwitch />
-          {state.demo ? <span className="demo-tag"><span />{t('Modo demo')}</span> : <span className="private-tag"><Icon name="lock" /> {t('Espacio privado')}</span>}
-          {state.demo && !isAccount && <Link className="button top-button" href="/cuenta?modo=registro" data-route="">{t('Crear cuenta')}</Link>}
-          {account && <Link className="top-avatar avatar" href="/cuenta" aria-label={t('Mi cuenta')} data-route="">{initials(account.name)}</Link>}
+          <span className="private-tag"><Icon name="lock" /> {t('Espacio privado')}</span>
+          <Link className="top-avatar avatar" href="/cuenta" aria-label={t('Mi cuenta')} data-route="">{initials(account.name)}</Link>
         </div>
       </div></header>
       <main id="contenido" className="content" tabIndex={-1}>{children}</main>
@@ -228,7 +227,7 @@ export function Today({ state, day }: DayView) {
   const first = sessions.find((workout) => !workout.done) ?? sessions[0];
   const today = state.today === day;
   return <>
-    <Intro title={today ? t('Tu día, en orden.') : t('Tu plan del día')}
+    <Intro title={today ? t('Hola, {name}', { name: state.user.name }) : t('Tu plan del día')}
       description={today ? t('Tu entrenamiento y tus hábitos, en un solo lugar.') : t('Consulta lo que tienes programado y revisa tu progreso.')} date={day}>
       <NewWorkout />
     </Intro>
@@ -305,9 +304,9 @@ export function Habits({ state, day }: DayView) {
   </>;
 }
 
-export function Account({ state, register, error, pending }: { state: PlannerState; register: boolean; error: string; pending: boolean }) {
+export function Account({ state, pending }: { state: PlannerState; pending: boolean }) {
   const { t } = useLanguage();
-  if (state.user) return <>
+  return <>
     <Intro title={t('Mi cuenta')} description={t('Administra el acceso a tu espacio personal.')} />
     <div className="panel account-panel">
       <span className="avatar account-avatar">{initials(state.user.name)}</span>
@@ -315,24 +314,4 @@ export function Account({ state, register, error, pending }: { state: PlannerSta
       <Button action="logout" glyph="logout" disabled={pending}>{t('Cerrar sesión')}</Button>
     </div>
   </>;
-  return <section className="auth-layout"><div className="panel auth-panel">
-    <BrandMark size={43} />
-    <h1>{register ? t('Crea tu cuenta') : t('Inicia sesión')}</h1>
-    <p>{register ? t('Empieza tu propia agenda de entrenamientos y hábitos.') : t('Entra para consultar tu entrenamiento y tus hábitos.')}</p>
-    <div className="auth-tabs" aria-label={t('Acceso a Qualy')}>
-      <Link href="/cuenta" data-route="" aria-current={!register ? 'page' : undefined}>{t('Iniciar sesión')}</Link>
-      <Link href="/cuenta?modo=registro" data-route="" aria-current={register ? 'page' : undefined}>{t('Crear cuenta')}</Link>
-    </div>
-    <form id="auth-form" key={String(register)} data-mode={register ? 'registro' : 'ingreso'}>
-      {register && <label>{t('Nombre')}<input name="name" autoComplete="name" maxLength={70} placeholder={t('Tu nombre')} required /></label>}
-      <label>{t('Correo electrónico')}<input name="email" type="email" autoComplete="username" maxLength={254} placeholder={t('tu@correo.com')} required /></label>
-      <div className="field"><label>{t('Contraseña')}<input name="password" type="password" minLength={register ? 12 : undefined} maxLength={128}
-        autoComplete={register ? 'new-password' : 'current-password'} aria-describedby={register ? 'password-help' : undefined} required /></label>
-        {register && <small id="password-help">{t('Usa al menos 12 caracteres.')}</small>}
-      </div>
-      <p className="form-error" role="alert" hidden={!error}>{error}</p>
-      <button className="button primary" type="submit" disabled={pending}>{register ? t('Crear cuenta') : t('Iniciar sesión')} <Icon name="arrow" /></button>
-    </form>
-    <ActionLink href="/hoy" glyph="left" className="text-link auth-back">{t('Volver a la demo')}</ActionLink>
-  </div></section>;
 }

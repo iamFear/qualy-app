@@ -71,6 +71,11 @@ jobs:
               psql -h 127.0.0.1 -U qualy -d qualy_ci -v ON_ERROR_STOP=1 < "$migration"
           done
 
+      - name: Check production database configuration against PostgreSQL
+        env:
+          DATABASE_URL: postgresql://qualy:qualy_ci@127.0.0.1:${{ job.services.postgres.ports['5432'] }}/qualy_ci
+        run: npm run db:check
+
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 

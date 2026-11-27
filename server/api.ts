@@ -1,11 +1,10 @@
 import postgres from 'postgres';
-import type { QualyState } from '../lib/models.ts';
+import type { PlannerState } from '../lib/models.ts';
 import { databaseErrorCode } from './db.ts';
 import { localeFromCookie, translate } from '../lib/i18n.ts';
 import { isHttpsDeployment } from '../lib/deployment.ts';
 import { todayInBogota } from '../lib/dates.ts';
 import { openStore } from './store.ts';
-import { demoState } from '../lib/demo.ts';
 import { HttpError, object, credentials, workout, habit, date, completion, habitLog } from './validation.ts';
 import { hashSession, issueSession, sessionCookie, hashPassword, matchesPassword, makeLimiter } from './auth.ts';
 
@@ -13,7 +12,7 @@ const unavailable = 'El guardado no está disponible por el momento.';
 const connectionErrors = new Set(['ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND',
   'CONNECT_TIMEOUT', 'CONNECTION_CLOSED', '57P01', '57P02', '57P03']);
 
-type ApiResult = QualyState | { id: string } | { ok: boolean } | { error: string };
+type ApiResult = PlannerState | { id: string } | { ok: boolean } | { error: string };
 type ApiOptions = { databaseUrl?: string; schema?: string; origin?: string; now?: () => Date };
 
 function json(status: number, value: ApiResult, cookie?: string) {
@@ -75,79 +74,84 @@ export function createApi({
     store ??= openStore(databaseUrl, schema);
     return store;
   }
-  // Route Handlers do not expose the socket's peer address.
-  // Share limits per action instead of trusting forwarded headers.
+  // Route Handlers limit attempts per email. Configure IP limits at the edge.
   const limit = makeLimiter();
   const secure = isHttpsDeployment(origin);
   let cleanupAfter = 0;
 
+  async function getAccount(cookie: string | null) {
+    const hash = hashSession(cookie);
+    return hash ? database().userForSession(hash, Date.now()) : undefined;
+  }
+
+  async function readWriteBody(req: Request) {
+    const data = await bodyOf(req);
+    const timestamp = Date.now();
+    if (!databaseUrl || timestamp < cleanupAfter) return data;
+    cleanupAfter = timestamp + 60 * 60 * 1000;
+    try {
+      await database().cleanup(timestamp);
+    } catch (error) {
+      cleanupAfter = 0;
+      throw error;
+    }
+    return data;
+  }
+
   async function handleApi(req: Request): Promise<Response> {
     const path = new URL(req.url).pathname;
-    const hash = hashSession(req.headers.get('cookie'));
+    const cookie = req.headers.get('cookie');
     const today = todayInBogota(now());
-    const timestamp = Date.now();
-    const user = hash ? await database().userForSession(hash, timestamp) : undefined;
     if (path === '/api/state' && req.method === 'GET') {
-      const state = user ? await database().state(user, today) : demoState(today);
-      return json(200, { ...state, signedIn: Boolean(user) });
+      const user = await getAccount(cookie);
+      if (!user) throw new HttpError(401, 'Inicia sesión');
+      return json(200, await database().state(user, today));
     }
     if (!['POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method)) throw new HttpError(404, 'No encontramos esta página.');
+    const isPost = req.method === 'POST';
+    const isAuth = isPost && (path === '/api/register' || path === '/api/login' || path === '/api/logout');
+    const isCreation = isPost && (path === '/api/workouts' || path === '/api/habits');
+    const item = path.match(/^\/api\/(workouts|habits)\/([a-z0-9-]{1,64})(?:\/(done|log))?$/);
+    if (!isAuth && !isCreation && !item) throw new HttpError(404, 'No encontramos esta página.');
     allowWrite(req, secure, origin);
-    const data = await bodyOf(req);
-    if (databaseUrl && timestamp >= cleanupAfter) {
-      cleanupAfter = timestamp + 60 * 60 * 1000;
-      try {
-        await database().cleanup(timestamp);
-      } catch (error) {
-        cleanupAfter = 0;
-        throw error;
-      }
-    }
 
-    if (req.method === 'POST') {
-      if (path === '/api/demo') {
-        if (user) return json(200, { ok: true });
-        return limit('demo', 25, async () => {
-          const session = issueSession(7);
-          await database().createDemo(today, session.hash, session.expires);
-          return json(201, { ok: true }, sessionCookie(session, secure));
-        });
-      }
-      if (path === '/api/register' || path === '/api/login') {
-        const registering = path === '/api/register';
-        const { email, password, name } = credentials(data, registering);
-        return limit('auth', 30, async () => {
-          const session = issueSession(30);
-          if (registering) {
-            const passwordHash = await hashPassword(password);
-            try {
-              await database().createAccount({ name, email, passwordHash, hash: session.hash, expires: session.expires, replacedHash: hash });
-            } catch (error) {
-              if (!(error instanceof postgres.PostgresError) || error.code !== '23505' || error.constraint_name !== 'users_email_key') throw error;
-              throw new HttpError(409, 'No pudimos crear la cuenta con este correo. Puedes intentar iniciar sesión.');
-            }
-          } else {
-            const existing = await database().userForEmail(email);
-            const valid = await matchesPassword(password, existing?.password_hash);
-            if (!existing || !valid) throw new HttpError(401, 'El correo o la contraseña son incorrectos.');
-            await database().createSession(session.hash, existing.id, session.expires, hash);
-          }
-          return json(registering ? 201 : 200, { ok: true }, sessionCookie(session, secure));
-        });
-      }
+    if (isAuth) {
+      const data = await readWriteBody(req);
+      const hash = hashSession(cookie);
       if (path === '/api/logout') {
         if (hash) await database().removeSession(hash);
         return json(200, { ok: true }, sessionCookie(null, secure));
       }
+      const registering = path === '/api/register';
+      const { email, password, name } = credentials(data, registering);
+      return limit(email, 30, async () => {
+        const session = issueSession(30);
+        if (registering) {
+          const passwordHash = await hashPassword(password);
+          try {
+            await database().createAccount({ name, email, passwordHash, hash: session.hash, expires: session.expires, replacedHash: hash });
+          } catch (error) {
+            if (!(error instanceof postgres.PostgresError) || error.code !== '23505' || error.constraint_name !== 'users_email_key') throw error;
+            throw new HttpError(409, 'No pudimos crear la cuenta con este correo. Puedes intentar iniciar sesión.');
+          }
+        } else {
+          const existing = await database().userForEmail(email);
+          const valid = await matchesPassword(password, existing?.password_hash);
+          if (!existing || !valid) throw new HttpError(401, 'El correo o la contraseña son incorrectos.');
+          await database().createSession(session.hash, existing.id, session.expires, hash);
+        }
+        return json(registering ? 201 : 200, { ok: true }, sessionCookie(session, secure));
+      });
     }
 
+    const user = await getAccount(cookie);
     if (!user) throw new HttpError(401, 'Inicia sesión para guardar tus cambios.');
+    const data = await readWriteBody(req);
     const owner = user.id;
-    const item = path.match(/^\/api\/(workouts|habits)\/([a-z0-9-]{1,64})(?:\/(done|log))?$/);
-    if (path === '/api/workouts' && req.method === 'POST') {
+    if (isCreation && path === '/api/workouts') {
       return json(201, { id: await database().createWorkout(owner, workout(data)) });
     }
-    if (path === '/api/habits' && req.method === 'POST') {
+    if (isCreation && path === '/api/habits') {
       return json(201, { id: await database().createHabit(owner, habit(data), today) });
     }
     if (!item) throw new HttpError(404, 'No encontramos esta página.');
@@ -172,6 +176,7 @@ export function createApi({
   }
 
   return {
+    getAccount,
     async handle(request: Request) {
       const locale = localeFromCookie(request.headers.get('cookie'));
       try {

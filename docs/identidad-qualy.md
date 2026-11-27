@@ -26,9 +26,9 @@ El símbolo combina tres trazos diagonales de altura ascendente. Las marcas evoc
 ## Patrón y composición
 
 - Repite líneas diagonales a intervalos amplios, como las marcas de carril. En bloques de fondo, usa bosque con líneas tenues de lima. Reserva la trama para zonas de apoyo y deja espacio limpio alrededor de titulares y controles.
-- Combina un titular amplio con fotografía editorial de rutinas cotidianas. Prioriza gestos reconocibles, luz natural y tonos verdes apagados. Identifica como ejemplo los datos ilustrativos que aparecen junto a una foto.
+- Combina un titular amplio con fotografía editorial de rutinas cotidianas. Prioriza gestos reconocibles, luz natural y tonos verdes apagados.
 - Usa una retícula amplia y aire entre secciones. En pantallas estrechas, deja que la foto siga a las acciones principales y apila las explicaciones.
-- Mantén una acción principal por bloque. **Probar la demo**, **Iniciar sesión** y **Crear cuenta** nombran acciones distintas. Describe lo que la persona puede hacer con la agenda y evita prometer resultados físicos.
+- Mantén una acción principal por bloque. Usa **Crear cuenta** para invitar a empezar e **Iniciar sesión** para acceder a una cuenta existente. Describe lo que la persona puede hacer con la agenda y evita prometer resultados físicos.
 
 ## Aplicación
 
