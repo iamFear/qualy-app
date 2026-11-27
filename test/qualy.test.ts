@@ -4,7 +4,7 @@ import type { PlannerState } from '../lib/models.ts';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { connectDatabase } from '../server/db.ts';
+import { connectDatabase, isHostedDatabase } from '../server/db.ts';
 import { createApi } from '../server/api.ts';
 import { hashPassword, issueSession, sessionCookie } from '../server/auth.ts';
 import { addDays, todayInBogota, weekOf } from '../lib/dates.ts';
@@ -102,6 +102,48 @@ test('El registro rechaza correos mal formados y contraseñas débiles', async (
     assert.equal(response.headers.get('set-cookie'), null);
     assert.match((await response.json()).error, error, JSON.stringify(fields));
   }
+});
+
+test('El límite de intentos se comparte entre variantes de un correo', async () => {
+  const api = createApi({ databaseUrl: '' });
+  const attempt = (path: string, email: string) => api.handle(new Request(`http://localhost/api/${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Qualy-Request': '1' },
+    body: JSON.stringify({ ...account, email }),
+  }));
+
+  const variant = `  ${account.email.toUpperCase()}  `;
+  for (let i = 0; i < 30; i++) {
+    assert.equal((await attempt('login', i % 2 === 0 ? account.email : variant)).status, 503);
+  }
+  assert.equal((await attempt('register', variant)).status, 429);
+  assert.equal((await attempt('login', 'otra@example.test')).status, 503);
+});
+
+test('Vercel usa un cupo de PostgreSQL y conserva TLS verificado para destinos remotos', async (t) => {
+  const original = process.env.VERCEL;
+  t.after(() => {
+    if (original === undefined) delete process.env.VERCEL;
+    else process.env.VERCEL = original;
+  });
+  process.env.VERCEL = '0';
+  const local = connectDatabase('postgresql://127.0.0.1/qualy');
+  t.after(() => local.end());
+  assert.equal(local.options.max, 5);
+  assert.equal(isHostedDatabase(local.options), false);
+
+  process.env.VERCEL = '1';
+  const hosted = connectDatabase('postgresql://localhost/qualy?host=db.example.test&sslmode=disable&max=15');
+  t.after(() => hosted.end());
+  assert.equal(hosted.options.max, 1);
+  assert.equal(hosted.options.prepare, false);
+  assert.equal(hosted.options.max_pipeline, 1);
+  assert.equal(isHostedDatabase(hosted.options), true);
+  assert.ok(typeof hosted.options.ssl === 'object' && hosted.options.ssl.rejectUnauthorized);
+
+  const localOverride = connectDatabase('postgresql://db.example.test/qualy?host=127.1');
+  t.after(() => localOverride.end());
+  assert.equal(isHostedDatabase(localOverride.options), false);
 });
 
 test('El registro simultáneo de variantes de un correo solo crea una cuenta', postgresTest, async (t) => {

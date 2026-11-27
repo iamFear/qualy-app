@@ -74,8 +74,7 @@ export function createApi({
     store ??= openStore(databaseUrl, schema);
     return store;
   }
-  // Route Handlers do not expose the socket's peer address.
-  // Share limits per action instead of trusting forwarded headers.
+  // Route Handlers limit attempts per email. Configure IP limits at the edge.
   const limit = makeLimiter();
   const secure = isHttpsDeployment(origin);
   let cleanupAfter = 0;
@@ -125,7 +124,7 @@ export function createApi({
       }
       const registering = path === '/api/register';
       const { email, password, name } = credentials(data, registering);
-      return limit('auth', 30, async () => {
+      return limit(email, 30, async () => {
         const session = issueSession(30);
         if (registering) {
           const passwordHash = await hashPassword(password);
