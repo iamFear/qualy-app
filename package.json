@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Agenda privada de entrenamientos y hábitos diarios",
   "engines": {
-    "node": "24.x"
+    "node": "26.x"
   },
   "scripts": {
     "predev": "node scripts/start-local-postgres.ts",
@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@playwright/test": "1.65.1",
-    "@types/node": "24.19.4",
+    "@types/node": "26.6.11",
     "@types/react": "19.3.2",
     "@types/react-dom": "19.3.0",
     "typescript": "5.9.3"

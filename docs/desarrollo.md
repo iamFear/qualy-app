@@ -10,7 +10,7 @@ La [especificación de la landing](../specs/landing/spec.md) documenta los acces
 
 ## Ejecutar en local
 
-Necesitas Node.js 24. Para guardar cambios, configura PostgreSQL. Si es una copia nueva, crea `.env.local` a partir de `.env.example`.
+Necesitas Node.js 26. Para guardar cambios, configura PostgreSQL. Si es una copia nueva, crea `.env.local` a partir de `.env.example`.
 
 ```sh
 npm ci
@@ -83,7 +83,7 @@ npm run test:e2e
 
 ## GitHub Actions y Vercel
 
-El workflow [Qualy CI](../.github/workflows/ci.yml) corre en pull requests hacia `main` y en pushes a `main`. Usa Node.js 24, un contenedor PostgreSQL 18 y Chromium para verificar tipos, ejecutar las pruebas unitarias y de integración y probar la compilación de producción. GitHub conserva una traza si falla una prueba de navegador.
+El workflow [Qualy CI](../.github/workflows/ci.yml) corre en pull requests hacia `main` y en pushes a `main`. Lee la versión de Node.js 26 desde `.node-version` y usa PostgreSQL 18 y Chromium para verificar tipos, ejecutar las pruebas unitarias y de integración y probar la compilación de producción. GitHub conserva una traza si falla una prueba de navegador. Vercel toma la versión de Node.js de `engines.node` en `package.json`. [Versiones de Node.js en Vercel](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions)
 
 1. Publica el repositorio en GitHub y verifica que pase **Verify Qualy**. En las reglas de la rama `main`, exige ese check para fusionar cambios.
 2. Aplica las migraciones SQL versionadas de Qualy a los proyectos Supabase de Preview y Production. Guarda en cada entorno de Vercel su propia `DATABASE_URL` con la URI del **Transaction pooler**. Si la conexión requiere una CA, configura `DATABASE_SSL_CA` en el mismo entorno. Qualy verifica TLS y usa hasta una conexión por instancia de Vercel. [Conexiones de Supabase](https://supabase.com/docs/guides/database/connecting-to-postgres#configure-your-client)
