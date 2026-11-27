@@ -12,7 +12,7 @@
 - [x] Aplicar y verificar la migración de Qualy en Supabase Preview y Production.
 - [x] Configurar `DATABASE_URL` por separado para Preview y Production en Vercel.
 - [ ] Habilitar el límite por IP en Vercel.
-- [ ] Verificar el flujo en Vercel Preview con Supabase de prueba.
+- [x] Verificar el registro, inicio y cierre de sesión y la recarga en Vercel Preview con Supabase de prueba.
 
 ## Evidencia
 
@@ -30,4 +30,4 @@
 - El navegador confirmó que [qualy-app](https://vercel.com/astodev/qualy-app) está vinculado a `iamFear/qualy-app`, usa `main` en producción y aún carece de `DATABASE_URL`. El conector de Vercel devolvió `403` para el alcance `astodev`.
 - El navegador confirmó dos entradas `DATABASE_URL` en Vercel, una para Preview y otra para Production. La conexión efectiva de la aplicación se comprueba en el despliegue.
 - La rama `login` se publicó en GitHub y [Verify Qualy](https://github.com/iamFear/qualy-app/actions/runs/45921612877) pasó en `44ab1c3`. [Vercel Preview](https://vercel.com/astodev/qualy-app/DvMWyJZph3NHqneXp89oyiZurMbX) completó la compilación y redirigió de `/hoy` a `/cuenta` para una visita sin sesión. El registro devolvió un error y Vercel registró `SELF_SIGNED_CERT_IN_CHAIN`. El certificado público descargado desde Supabase verificó la cadena y el nombre de host del Transaction pooler. Falta configurar `DATABASE_SSL_CA` en Preview y volver a probar el registro.
-- Se guardó el certificado público oficial de Supabase como `DATABASE_SSL_CA` en Vercel Preview. El nuevo despliegue de `login` comprobará el registro con la validación TLS habilitada.
+- Se guardó el certificado público oficial de Supabase como `DATABASE_SSL_CA` en Vercel Preview. En el [despliegue de `d789d32`](https://vercel.com/astodev/qualy-app/BALZLFh1GnShhvyYKpw3oEt3FybG) se verificaron en Chrome el registro, el saludo por nombre, la agenda inicial vacía, el cierre y reingreso y la conservación de sesión al recargar. Supabase confirmó que la cuenta de prueba quedó en Preview con cero sesiones abiertas y que Production tiene cero cuentas de esa prueba. El certificado de Production sigue pendiente.
